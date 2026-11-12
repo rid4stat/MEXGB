@@ -2,11 +2,11 @@ Package: MEXGB
 Type: Package
 Title: Mixed-Effect Extreme Gradient Boosting for Longitudinal Data
 Version: 1.0.0
-Authors@R: c(person("Oyebayo Ridwan", "Olaniran", role = c("aut", "cre")),
-             person("Saheed Kunle", "Ajibade", role = "aut",
-                    email = "rid4stat@yahoo.com"),
+Authors@R: c(person("Oyebayo Ridwan", "Olaniran", role = c("aut", "cre"),
+                    email = "rid4stat@yahoo.com",
+                    comment = c(ORCID = "0000-0001-7342-8639")),
+             person("Saheed Kunle", "Ajibade", role = "aut"),
              person("Samuel Adewale", "Aderoju", role = "aut"))
-Maintainer: Oyebayo Ridwan Olaniran <rid4stat@yahoo.com>
 Description: Fits mixed-effects extreme gradient boosting models for Gaussian,
     binary and clustered right-censored survival outcomes. Combines subject-specific
     random effects with boosted trees and optional penalised linear terms using

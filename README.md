@@ -65,7 +65,7 @@ log-likelihood) of $\eta_{ij}=f(x_{ij})+o_{ij}$. Tree $m$ is grown on
 the gradients $g_{ij}=\partial\ell/\partial\eta_{ij}$ and Hessians
 $h_{ij}=\partial^2\ell/\partial\eta_{ij}^2$:
 
-$$T_m=\arg\min_T\sum_{ij}\Bigl[g_{ij}T(x_{ij})+\tfrac12 h_{ij}T(x_{ij})^2\Bigr]+\gamma_{\rm split}|T|+\tfrac12\lambda\sum_{\ell}w_\ell^2+\alpha\sum_{\ell}|w_\ell|,$$
+$$T_m=\arg\min_T\sum_{ij}\\Bigl[g_{ij}T(x_{ij})+\tfrac12 h_{ij}T(x_{ij})^2\\Bigr]+\gamma_{\rm split}|T|+\tfrac12\lambda\sum_{\ell}w_\ell^2+\alpha\sum_{\ell}|w_\ell|,$$
 
 so that a leaf with index set $I_\ell$ has weight
 $w_\ell=-\sum_{I_\ell}g/(\sum_{I_\ell}h+\lambda)$ when $\alpha=0$. For

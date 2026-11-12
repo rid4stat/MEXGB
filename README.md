@@ -65,7 +65,7 @@ log-likelihood) of $\eta_{ij}=f(x_{ij})+o_{ij}$. Tree $m$ is grown on
 the gradients $g_{ij}=\partial\ell/\partial\eta_{ij}$ and Hessians
 $h_{ij}=\partial^2\ell/\partial\eta_{ij}^2$:
 
-$$T_m=\arg\min_T\sum_{ij}\Big[g_{ij}T(x_{ij})+\tfrac12 h_{ij}T(x_{ij})^2\Big]+\gamma_{\rm split}|T|+\tfrac12\lambda\sum_{\ell}w_\ell^2+\alpha\sum_{\ell}|w_\ell|,$$
+$$T_m=\arg\min_T\sum_{ij}\Bigg[g_{ij}T(x_{ij})+\tfrac12 h_{ij}T(x_{ij})^2\Bigg]+\gamma_{\rm split}|T|+\tfrac12\lambda\sum_{\ell}w_\ell^2+\alpha\sum_{\ell}|w_\ell|,$$
 
 so that a leaf with index set $I_\ell$ has weight
 $w_\ell=-\sum_{I_\ell}g/(\sum_{I_\ell}h+\lambda)$ when $\alpha=0$. For
@@ -89,15 +89,15 @@ $r_i=y_i-\hat f_i-Z_i\hat\beta_z$ and
 $V_i=Z_iDZ_i^\top+\sigma^2I_{n_i}$,
 
 $$\hat b_i=DZ_i^\top V_i^{-1}r_i,\qquad
-\hat\sigma^2=\frac1N\sum_i\Big\{\hat\epsilon_i^\top\hat\epsilon_i+\sigma^2\big(n_i-\sigma^2\text{tr}V_i^{-1}\big)\Big\},$$
+\hat\sigma^2=\frac1N\sum_i\Bigg\{\hat\epsilon_i^\top\hat\epsilon_i+\sigma^2\Bigg(n_i-\sigma^2\text{tr}V_i^{-1}\Bigg)\Bigg\},$$
 
-$$\hat D=\frac1n\sum_i\Big\{\hat b_i\hat b_i^\top+D-DZ_i^\top V_i^{-1}Z_iD\Big\},\qquad
+$$\hat D=\frac1n\sum_i\Bigg\{\hat b_i\hat b_i^\top+D-DZ_i^\top V_i^{-1}Z_iD\Bigg\},\qquad
 \hat\epsilon_i=r_i-Z_i\hat b_i,$$
 
 iterated to convergence (`inner`, `inner_tol`) for the current $\hat f$
 before the next M-step. The EM is monitored with
 
-$$-2\ell(f,D,\sigma^2)=\sum_i\Big\{\log|V_i|+r_i^\top V_i^{-1}r_i\Big\}+\text{const}.$$
+$$-2\ell(f,D,\sigma^2)=\sum_i\Bigg\{\log|V_i|+r_i^\top V_i^{-1}r_i\Bigg\}+\text{const}.$$
 
 When `heldout_blup = TRUE`, the random effect of a held-out row is
 predicted only from the other folds’ rows of the same individual, as for
@@ -120,7 +120,7 @@ replaced by $W_i^{-1}=\text{diag}(1/w_{ij})$. Because the PQL
 estimate of $D$ is biased downwards, `estep = "laplace"` then
 re-estimates $D$ by maximising the Laplace approximation
 
-$$\ell_L(D)=\sum_i\Big\{\log p(y_i\mid\tilde b_i)-\tfrac12\tilde b_i^\top D^{-1}\tilde b_i-\tfrac12\log\big|I_q+DZ_i^\top W_iZ_i\big|\Big\},$$
+$$\ell_L(D)=\sum_i\Bigg\{\log p(y_i\mid\tilde b_i)-\tfrac12\tilde b_i^\top D^{-1}\tilde b_i-\tfrac12\log\Bigg|I_q+DZ_i^\top W_iZ_i\Bigg|\Bigg\},$$
 
 with $\tilde b_i$ the posterior modes, as in `lme4::glmer` (`nAGQ = 1`).
 

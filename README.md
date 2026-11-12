@@ -99,7 +99,7 @@ $$\hat D=\frac1n\sum_i \\Bigl\\{\hat b_i\hat b_i^\top+D-DZ_i^\top V_i^{-1}Z_iD\\
 iterated to convergence (`inner`, `inner_tol`) for the current $\hat f$
 before the next M-step. The EM is monitored with
 
-$$-2\ell(f,D,\sigma^2)=\sum_i\\Bigl\{\log|V_i|+r_i^\top V_i^{-1}r_i\\Bigr\}+\text{const}.$$
+$$-2\ell(f,D,\sigma^2)=\sum_i\\Bigl\\{\log|V_i|+r_i^\top V_i^{-1}r_i\\Bigr\\}+\text{const}.$$
 
 When `heldout_blup = TRUE`, the random effect of a held-out row is
 predicted only from the other folds’ rows of the same individual, as for
@@ -122,7 +122,7 @@ replaced by $W_i^{-1}=\text{diag}(1/w_{ij})$. Because the PQL
 estimate of $D$ is biased downwards, `estep = "laplace"` then
 re-estimates $D$ by maximising the Laplace approximation
 
-$$\ell_L(D)=\sum_i\\Bigl\{\log p(y_i\mid\tilde b_i)-\tfrac12\tilde b_i^\top D^{-1}\tilde b_i-\tfrac12\log\\Bigl|I_q+DZ_i^\top W_iZ_i\\Bigr|\\Bigr\},$$
+$$\ell_L(D)=\sum_i\\Bigl\\{\log p(y_i\mid\tilde b_i)-\tfrac12\tilde b_i^\top D^{-1}\tilde b_i-\tfrac12\log\\Bigl|I_q+DZ_i^\top W_iZ_i\\Bigr|\\Bigr\\},$$
 
 with $\tilde b_i$ the posterior modes, as in `lme4::glmer` (`nAGQ = 1`).
 

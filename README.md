@@ -88,8 +88,10 @@ are also chosen out of fold.
 $r_i=y_i-\hat f_i-Z_i\hat\beta_z$ and
 $V_i=Z_iDZ_i^\top+\sigma^2I_{n_i}$,
 
-$$\hat b_i=DZ_i^\top V_i^{-1}r_i,\qquad
-\hat\sigma^2=\frac1N\sum_i \\Bigl\{\hat\epsilon_i^\top\hat\epsilon_i+\sigma^2\\Bigl(n_i-\sigma^2\text{tr}V_i^{-1}\\Bigr)\\Bigr\},$$
+$$
+\hat b_i=DZ_i^\top V_i^{-1}r_i,\qquad
+\hat\sigma^2=\frac{1}{N}\sum_i \Bigl\{\hat\epsilon_i^\top\hat\epsilon_i+\sigma^2\Bigl(n_i-\sigma^2\text{tr}V_i^{-1}\Bigr)\Bigr\},
+$$
 
 $$\hat D=\frac1n\sum_i \\Bigl\{\hat b_i\hat b_i^\top+D-DZ_i^\top V_i^{-1}Z_iD\\Bigr\},\qquad
 \hat\epsilon_i=r_i-Z_i\hat b_i,$$

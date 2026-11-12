@@ -23,7 +23,7 @@ MEXGB(
   min_child_weight = NULL,
   family = c("gaussian", "binomial", "cox"),
   delta = 0.001,
-  patience = 5,
+  stall_iter = 5,
   eps = 1e-06,
   crossfit = 5,
   init = c("auto", "lmm", "zero"),
@@ -39,9 +39,9 @@ MEXGB(
   screen = c("auto", "none"),
   screen_iter = 2,
   zfixed = TRUE,
-  honest = TRUE,
-  honest_d = TRUE,
-  honest_offset = TRUE,
+  heldout_blup = TRUE,
+  heldout_dscale = TRUE,
+  heldout_offset = TRUE,
   ntree_select = c("cv", "fixed"),
   criterion = c("laplace", "working"),
   estep = c("laplace", "pql"),
@@ -89,18 +89,18 @@ for other families it is a heuristic, not a guaranteed minimum leaf count.}
 
 \item{delta}{[numeric]: The algorithm stops when the relative difference in log likelihood between two iterations is smaller than \code{delta}. The default value is set to 0.001}
 
-\item{patience}{Positive integer number of iterations without improvement before
-stopping, or Inf to disable this safeguard. Default 5. Selection uses the
+\item{stall_iter}{Positive integer: the EM stops when the selection criterion has not
+improved for \code{stall_iter} consecutive iterations and returns the best iteration
+(a safeguard for stochastic boosting). Inf disables it. Default 5. Selection uses the
 Gaussian held-out loss when available, otherwise the chosen likelihood criterion.}
 
 \item{eps}{[numeric]: Lower bound for the PQL working weights (binary and cox outcomes). Default \code{1e-6}.}
 
 \item{crossfit}{Number of within-subject folds: 0 (disabled) or an integer from
 2 to the number of observations. Default 5. Empty folds, insufficient training
-rows, binary training folds with one class, and survival folds without events
-are rejected. Change seed, reduce folds, or provide more data if necessary.
-With crossfit = 0, automatic linear selection is disabled; explicit linear = TRUE
-requires cross-fitting.}
+rows, binary training folds with one class, and survival training folds without
+events are rejected. Change seed, reduce folds, or provide more data if necessary.
+With crossfit = 0 the linear part is not fitted (linear = TRUE gives a warning).}
 
 \item{init}{[character]: Starting values of the EM. \code{"auto"} (default): \code{"zero"} for
 \code{family = "gaussian"}, \code{"lmm"} otherwise. \code{"lmm"}: the random effects,
@@ -139,7 +139,7 @@ histogram algorithm above.}
 
 \item{linear}{[logical or \code{"auto"}]: \code{"auto"} (default): for
 \code{family = "gaussian"} the fixed effect with and without the linear part is fitted at the
-first \code{screen_iter} M-steps (on all predictors) and the one with the smaller honest
+first \code{screen_iter} M-steps (on all predictors) and the one with the smaller
 out-of-fold loss is kept, when \eqn{p>\sqrt{N}} (with fewer predictors the linear part is
 always kept); for the other
 families \code{"auto"} means \code{TRUE}. If \code{TRUE} the fixed effect is
@@ -159,16 +159,16 @@ remainder. \code{FALSE}: trees only (MEXGB <= 0.4).}
 
 \item{zfixed}{[logical]: estimate population coefficients \eqn{\beta_z} for the columns of \code{Z} (default \code{TRUE}), so that the random effects are deviations with mean zero: the model is \eqn{f(x)+z^\top\beta_z+z^\top b_i}. Without them a population trend in a column of \code{Z} that \eqn{f} does not capture is absorbed by the mean of the random effects and inflates \eqn{D}. For \code{family = "cox"} the intercept of \eqn{\beta_z} is not identified and is fixed at 0.}
 
-\item{honest}{[logical]: Gaussian with cross-fitting (default \code{TRUE}): in every out-of-fold
+\item{heldout_blup}{[logical]: Gaussian with cross-fitting (default \code{TRUE}): in every out-of-fold
 loss the random effects of a held-out row are predicted from the other folds' rows of the same
 individual only (as for a new measurement), and the returned iteration is the one with the
-smallest held-out squared error when honest_d is also TRUE. This is a tuning criterion, not an unbiased performance estimate.}
+smallest held-out squared error when heldout_dscale is also TRUE. This is a tuning criterion, not an unbiased performance estimate.}
 
-\item{honest_d}{[logical]: Gaussian with \code{honest = TRUE} (default \code{TRUE}): after every
-E-step D is scaled by the factor c in \{0, 1/16, 1/8, 1/4, 1/2, 1\} that minimises the honest
-out-of-fold squared error, subject to a subject-clustered improvement heuristic (c = 1 keeps the EM estimate).}
+\item{heldout_dscale}{[logical]: Gaussian with \code{heldout_blup = TRUE} (default \code{TRUE}): after every
+E-step D is scaled by the factor c in \{0, 1/16, 1/8, 1/4, 1/2, 1\} that minimises the held-out
+out-of-fold squared error, used only when it is better than c = 1 by a paired z statistic above 2 (a selection heuristic, not a hypothesis test; c = 1 keeps the EM estimate).}
 
-\item{honest_offset}{[logical]: with \code{honest = TRUE} (default \code{TRUE}), use the honest
+\item{heldout_offset}{[logical]: with \code{heldout_blup = TRUE} (default \code{TRUE}), use the held-out
 random-effect prediction as the offset of the held-out rows in the out-of-fold losses of the
 M-step (number of trees, linear part, screening). Not used at the first iteration with
 \code{init = "zero"}, where the offset is zero for every row.}
@@ -185,8 +185,9 @@ with the linearisation point and made the best-iteration rule return early itera
 \item{estep}{Binary/Cox variance update. "laplace" (default) follows PQL with
 optimization of the approximate criterion; "pql" retains the PQL update.
 The Laplace-style Cox criterion uses a Poisson working representation.
-If optimization fails to converge, the PQL update is retained with a warning
-and a diagnostic entry. These approximations do not establish inferential guarantees.}
+If the optimizer stops at its iteration limit its result is used and the code is
+recorded in laplace_diagnostics; if it fails (error or non-finite criterion) the
+PQL update is retained with a warning. These approximations do not establish inferential guarantees.}
 
 \item{nthread}{[numeric]: Number of threads used by \code{xgboost}. Default 1.}
 
@@ -212,7 +213,7 @@ A fitted MEXGB model which is a list of the following elements: \itemize{
 \item \code{ntree}, \code{nrounds}: Requested fold-model limit and selected full-model tree count.
 \item \code{beta_z:} Population coefficients for Z.
 \item \code{laplace_diagnostics:} Per-iteration convergence flag, optimizer code and message (NULL when no Laplace update was attempted).
-\item \code{honest_loss, d_scale:} Gaussian held-out loss and selected covariance scale by iteration.
+\item \code{heldout_loss, d_scale:} Gaussian held-out loss and selected covariance scale by iteration.
 }
 }
 \description{

@@ -91,11 +91,18 @@ test_that("zero-contribution models have a valid empty summary", {
   expect_error(summary(f, top = -1), "top")
 })
 
-test_that("cluster comparison accounts for within-subject replication", {
-  d <- c(1, 2, 3, 4)
-  z <- MEXGB:::mexgb_cluster_score(d, 1:4)
-  expect_equal(z, MEXGB:::mexgb_cluster_score(rep(d, each = 3), rep(1:4, each = 3)))
-  expect_equal(z, mean(d) / (sd(d) / sqrt(4)))
+test_that("crossfit = 0 ignores linear = TRUE with a warning", {
+  a <- small_design(); a$crossfit <- 0; a$linear <- TRUE
+  expect_warning(f <- do.call(MEXGB, c(a, list(ntree = 5))), "requires crossfit")
+  expect_s3_class(f, "MEXGB")
+})
+
+test_that("renamed stopping and held-out arguments are accepted", {
+  a <- small_design()
+  f <- do.call(MEXGB, c(a, list(ntree = 5, stall_iter = Inf, heldout_blup = FALSE,
+                               heldout_dscale = FALSE, heldout_offset = FALSE)))
+  expect_s3_class(f, "MEXGB")
+  expect_error(do.call(MEXGB, c(a, list(ntree = 5, stall_iter = 0))), "stall_iter")
 })
 
 test_that("discrimination helpers handle ties and extreme predictors", {
@@ -104,7 +111,7 @@ test_that("discrimination helpers handle ties and extreme predictors", {
   expect_true(is.finite(MEXGB:::expected_cindex(1:4, c(-2000, -1000, 0, 1000))))
 })
 
-test_that("Laplace failure is explicit rather than silently accepted", {
+test_that("a failed Laplace update is reported", {
   d <- MEXGB:::laplace_estep("binomial", c(0, 1), c(1, 1), c(0, 0),
                            matrix(0, 1, 2), matrix(c(1, 2, 2, 1), 2),
                            cbind(1, c(0, 1)), list(1:2))

@@ -57,16 +57,16 @@
 #' @param min_child_weight [numeric]: Optional override of the minimum Hessian weight in a leaf. If \code{NULL} (default) it is \code{n.minobsinnode} for \code{family="gaussian"} and \code{n.minobsinnode/4} for binary and Cox outcomes (a heuristic; for binary outcomes the Bernoulli Hessian is at most 1/4).
 #' @param family [character]: \code{"gaussian"} (continuous outcome, default), \code{"binomial"} (binary outcome) or \code{"cox"} (right-censored time-to-event outcome; mixed-effects (frailty) Cox model).
 #' @param delta [numeric]: The algorithm stops when the relative difference in log likelihood between two iterations is smaller than \code{delta}. The default value is set to 0.001
-#' @param patience Positive integer number of iterations without improvement before
-#'   stopping, or Inf to disable this safeguard. Default 5. Selection uses the
+#' @param stall_iter Positive integer: the EM stops when the selection criterion has not
+#'   improved for \code{stall_iter} consecutive iterations and returns the best iteration
+#'   (a safeguard for stochastic boosting). Inf disables it. Default 5. Selection uses the
 #'   Gaussian held-out loss when available, otherwise the chosen likelihood criterion.
 #' @param eps [numeric]: Lower bound for the PQL working weights (binary and cox outcomes). Default \code{1e-6}.
 #' @param crossfit Number of within-subject folds: 0 (disabled) or an integer from
 #'   2 to the number of observations. Default 5. Empty folds, insufficient training
-#'   rows, binary training folds with one class, and survival folds without events
-#'   are rejected. Change seed, reduce folds, or provide more data if necessary.
-#'   With crossfit = 0, automatic linear selection is disabled; explicit linear = TRUE
-#'   requires cross-fitting.
+#'   rows, binary training folds with one class, and survival training folds without
+#'   events are rejected. Change seed, reduce folds, or provide more data if necessary.
+#'   With crossfit = 0 the linear part is not fitted (linear = TRUE gives a warning).
 #' @param init [character]: Starting values of the EM. \code{"auto"} (default): \code{"zero"} for
 #'   \code{family = "gaussian"}, \code{"lmm"} otherwise. \code{"lmm"}: the random effects,
 #'   their covariance and the residual variance of the mixed model with a constant fixed effect
@@ -97,7 +97,7 @@
 #'   histogram algorithm above.
 #' @param linear [logical or \code{"auto"}]: \code{"auto"} (default): for
 #'   \code{family = "gaussian"} the fixed effect with and without the linear part is fitted at the
-#'   first \code{screen_iter} M-steps (on all predictors) and the one with the smaller honest
+#'   first \code{screen_iter} M-steps (on all predictors) and the one with the smaller
 #'   out-of-fold loss is kept, when \eqn{p>\sqrt{N}} (with fewer predictors the linear part is
 #'   always kept); for the other
 #'   families \code{"auto"} means \code{TRUE}. If \code{TRUE} the fixed effect is
@@ -117,20 +117,21 @@
 #' @param estep Binary/Cox variance update. "laplace" (default) follows PQL with
 #'   optimization of the approximate criterion; "pql" retains the PQL update.
 #'   The Laplace-style Cox criterion uses a Poisson working representation.
-#'   If optimization fails to converge, the PQL update is retained with a warning
-#'   and a diagnostic entry. These approximations do not establish inferential guarantees.
+#'   If the optimizer stops at its iteration limit its result is used and the code is
+#'   recorded in laplace_diagnostics; if it fails (error or non-finite criterion) the
+#'   PQL update is retained with a warning. These approximations do not establish inferential guarantees.
 #' @param lin_relax [logical]: also consider relaxed-lasso versions of the linear part (blend of the lasso and of the unpenalised refit on its active set), chosen out of fold. Default \code{TRUE}. At prediction the linear part is clamped to the range of its fitted values on the training data, so that the unpenalised refit cannot extrapolate for rare predictor values.
 #' @param screen [character]: \code{"auto"} (default): at the first EM iteration the trees are refitted on the K top-ranked predictors (split gain) of every fold model, K in \code{c(5, 10, 20, 40)}, and the predictor set (all or top K) with the smallest out-of-fold loss is kept for the following iterations. The ranking of each fold is computed from that fold's own model, so feature ranking excludes the validation rows; selection still requires independent performance evaluation. \code{"none"}: all predictors.
 #' @param screen_iter [numeric]: number of EM iterations at which the screening decision is (re)made (default 2: the ranking is reconsidered after the initial random-effect updates).
 #' @param zfixed [logical]: estimate population coefficients \eqn{\beta_z} for the columns of \code{Z} (default \code{TRUE}), so that the random effects are deviations with mean zero: the model is \eqn{f(x)+z^\top\beta_z+z^\top b_i}. Without them a population trend in a column of \code{Z} that \eqn{f} does not capture is absorbed by the mean of the random effects and inflates \eqn{D}. For \code{family = "cox"} the intercept of \eqn{\beta_z} is not identified and is fixed at 0.
-#' @param honest [logical]: Gaussian with cross-fitting (default \code{TRUE}): in every out-of-fold
+#' @param heldout_blup [logical]: Gaussian with cross-fitting (default \code{TRUE}): in every out-of-fold
 #'   loss the random effects of a held-out row are predicted from the other folds' rows of the same
 #'   individual only (as for a new measurement), and the returned iteration is the one with the
-#'   smallest held-out squared error when honest_d is also TRUE. This is a tuning criterion, not an unbiased performance estimate.
-#' @param honest_d [logical]: Gaussian with \code{honest = TRUE} (default \code{TRUE}): after every
-#'   E-step D is scaled by the factor c in \{0, 1/16, 1/8, 1/4, 1/2, 1\} that minimises the honest
-#'   out-of-fold squared error, subject to a subject-clustered improvement heuristic (c = 1 keeps the EM estimate).
-#' @param honest_offset [logical]: with \code{honest = TRUE} (default \code{TRUE}), use the honest
+#'   smallest held-out squared error when heldout_dscale is also TRUE. This is a tuning criterion, not an unbiased performance estimate.
+#' @param heldout_dscale [logical]: Gaussian with \code{heldout_blup = TRUE} (default \code{TRUE}): after every
+#'   E-step D is scaled by the factor c in \{0, 1/16, 1/8, 1/4, 1/2, 1\} that minimises the held-out
+#'   out-of-fold squared error, used only when it is better than c = 1 by a paired z statistic above 2 (a selection heuristic, not a hypothesis test; c = 1 keeps the EM estimate).
+#' @param heldout_offset [logical]: with \code{heldout_blup = TRUE} (default \code{TRUE}), use the held-out
 #'   random-effect prediction as the offset of the held-out rows in the out-of-fold losses of the
 #'   M-step (number of trees, linear part, screening). Not used at the first iteration with
 #'   \code{init = "zero"}, where the offset is zero for every row.
@@ -157,7 +158,7 @@
 #' \item \code{ntree}, \code{nrounds}: Requested fold-model limit and selected full-model tree count.
 #' \item \code{beta_z:} Population coefficients for Z.
 #' \item \code{laplace_diagnostics:} Per-iteration convergence flag, optimizer code and message (NULL when no Laplace update was attempted).
-#' \item \code{honest_loss, d_scale:} Gaussian held-out loss and selected covariance scale by iteration.
+#' \item \code{heldout_loss, d_scale:} Gaussian held-out loss and selected covariance scale by iteration.
 #' }
 #'
 #' @export
@@ -190,11 +191,11 @@
 MEXGB = function (X, Y, id, Z, iter = 100, ntree = 5000, time, shrinkage = 0.1,
                   interaction.depth = 1, n.minobsinnode = 5, lambda = 1, alpha = 0,
                   gamma = 0, subsample = 1, colsample_bytree = 1, min_child_weight = NULL,
-                  family = c("gaussian", "binomial", "cox"), delta = 0.001, patience = 5,
+                  family = c("gaussian", "binomial", "cox"), delta = 0.001, stall_iter = 5,
                   eps = 1e-6, crossfit = 5, init = c("auto", "lmm", "zero"), dispersion = c("auto", "additive", "multiplicative", "none"),
                   inner = 50, inner_tol = 1e-4, calibrate = TRUE, calibrate_binomial = TRUE,
                   tree_method = "auto", linear = "auto", lin_alpha = 1, lin_relax = TRUE,
-                  screen = c("auto", "none"), screen_iter = 2, zfixed = TRUE, honest = TRUE, honest_d = TRUE, honest_offset = TRUE,
+                  screen = c("auto", "none"), screen_iter = 2, zfixed = TRUE, heldout_blup = TRUE, heldout_dscale = TRUE, heldout_offset = TRUE,
                   ntree_select = c("cv", "fixed"), criterion = c("laplace", "working"),
                   estep = c("laplace", "pql"),
                   nthread = 1, seed = 1, verbose = TRUE)
@@ -207,7 +208,7 @@ MEXGB = function (X, Y, id, Z, iter = 100, ntree = 5000, time, shrinkage = 0.1,
   for (nm in c("iter", "ntree", "interaction.depth", "inner", "screen_iter", "nthread"))
     mexgb_number(get(nm), nm, 1, integer = TRUE)
   mexgb_number(seed, "seed", 0, .Machine$integer.max, integer = TRUE)
-  mexgb_number(patience, "patience", 1, integer = TRUE, allow_inf = TRUE)
+  mexgb_number(stall_iter, "stall_iter", 1, integer = TRUE, allow_inf = TRUE)
   for (nm in c("delta", "eps", "inner_tol", "shrinkage", "n.minobsinnode"))
     mexgb_number(get(nm), nm, 0, open_lower = TRUE)
   for (nm in c("lambda", "alpha", "gamma")) mexgb_number(get(nm), nm, 0)
@@ -215,8 +216,8 @@ MEXGB = function (X, Y, id, Z, iter = 100, ntree = 5000, time, shrinkage = 0.1,
     mexgb_number(get(nm), nm, 0, 1, open_lower = TRUE)
   mexgb_number(lin_alpha, "lin_alpha", 0, 1)
   if (!is.null(min_child_weight)) mexgb_number(min_child_weight, "min_child_weight", 0)
-  for (nm in c("calibrate", "calibrate_binomial", "lin_relax", "zfixed", "honest",
-               "honest_d", "honest_offset", "verbose")) mexgb_flag(get(nm), nm)
+  for (nm in c("calibrate", "calibrate_binomial", "lin_relax", "zfixed", "heldout_blup",
+               "heldout_dscale", "heldout_offset", "verbose")) mexgb_flag(get(nm), nm)
   if (!identical(linear, "auto")) mexgb_flag(linear, "linear")
   if (is.null(crossfit)) crossfit <- 0
   mexgb_number(crossfit, "crossfit", 0, integer = TRUE)
@@ -224,14 +225,18 @@ MEXGB = function (X, Y, id, Z, iter = 100, ntree = 5000, time, shrinkage = 0.1,
     stop("crossfit must be 0 or an integer from 2 to the number of observations.")
   if (crossfit == 0) {
     if (identical(linear, "auto")) linear <- FALSE
-    if (isTRUE(linear)) stop("linear = TRUE requires crossfit >= 2.")
+    if (isTRUE(linear)) {
+      warning("linear = TRUE requires crossfit >= 2; fitting the boosted trees without the linear part.",
+              call. = FALSE)
+      linear <- FALSE
+    }
   }
   tree_method <- match.arg(tree_method, c("auto", "exact", "hist", "approx"))
   init <- match.arg(init)
   ## init = "auto": "zero" for continuous outcomes (the first M-step is fitted before the random
   ## effects can absorb between-individual variation that x explains), "lmm" otherwise
   if (init == "auto") init <- if (family == "gaussian") "zero" else "lmm"
-  ## linear = "auto": Gaussian -> linear part + trees versus trees only decided by the honest
+  ## linear = "auto": Gaussian -> linear part + trees versus trees only decided by the held-out
   ## out-of-fold loss at the first M-step; binomial / cox -> linear part always included
   if (identical(linear, "auto") && family != "gaussian") linear <- TRUE
   ## few predictors (p <= sqrt(N)): the linear part has negligible variance and is kept; the
@@ -298,12 +303,13 @@ MEXGB = function (X, Y, id, Z, iter = 100, ntree = 5000, time, shrinkage = 0.1,
   converged <- FALSE
   baseline <- NULL
   f0 <- 0
-  best <- list(ll = Inf); stall <- 0; stopped_patience <- FALSE
+  best <- list(ll = Inf); stall <- 0; stopped_stall <- FALSE
   keep_best <- function(i, val = Vrai[i]) {   # remember the state with the smallest criterion
     if (val < best$ll) {
       best <<- list(ll = val, iter = i, forest = forest, btilde = btilde, Btilde = Btilde,
                     sigmahat = sigmahat, fhat = fhat, fhat_full = fhat_full, cal_slope = cal_slope,
-                    cal_center = cal_center, nrounds = nrounds_i, beta_z = beta_z, fz = fz)
+                    cal_center = cal_center, nrounds = nrounds_i, beta_z = beta_z, fz = fz,
+                    screen_sets = screen_sets_cur, linear = linear)
       stall <<- 0
     } else stall <<- stall + 1
   }
@@ -378,8 +384,8 @@ MEXGB = function (X, Y, id, Z, iter = 100, ntree = 5000, time, shrinkage = 0.1,
         stop("Cross-fitting produced an empty fold or fewer than two training rows; reduce crossfit or supply more observations.")
       if (family == "binomial" && length(unique(Y[tr])) < 2L)
         stop("Each cross-fitting training set must contain both binary classes; change seed or crossfit.")
-      if (family == "cox" && (!any(status[tr] == 1) || !any(status[te] == 1)))
-        stop("Each survival training and validation fold must contain an event; change seed or reduce crossfit.")
+      if (family == "cox" && !any(status[tr] == 1))
+        stop("Each survival training fold must contain an event; change seed or reduce crossfit.")
     }
     cf_arg <- cf_fold
   }
@@ -425,7 +431,7 @@ MEXGB = function (X, Y, id, Z, iter = 100, ntree = 5000, time, shrinkage = 0.1,
   }
 
   ## BLUP of every row's random effect from the OTHER cross-fitting folds of its individual
-  zb_honest <- function(r, B, s2) {
+  zb_heldout <- function(r, B, s2) {
     out <- numeric(N)
     for (k in 1:nind) {
       indiv <- indiv_list[[k]]
@@ -440,7 +446,7 @@ MEXGB = function (X, Y, id, Z, iter = 100, ntree = 5000, time, shrinkage = 0.1,
     }
     out
   }
-  honest_loss <- rep(NA_real_, iter); d_scale <- rep(NA_real_, iter)
+  heldout_loss <- rep(NA_real_, iter); d_scale <- rep(NA_real_, iter)
   f_prev0 <- if (init == "lmm" && family == "gaussian") f_init else rep(mean(Y), N)
 
   if (family == "gaussian") {
@@ -454,15 +460,15 @@ MEXGB = function (X, Y, id, Z, iter = 100, ntree = 5000, time, shrinkage = 0.1,
       }
 
       zb <- Zb(btilde) + fz
-      ## honest out-of-fold offset: for the rows of fold v, the BLUP computed from the other
+      ## held-out out-of-fold offset: for the rows of fold v, the BLUP computed from the other
       ## rows of the same individual only (as for a new measurement at prediction time)
-      ## (with init = "zero" the first offset is 0 for all rows, which is already honest)
-      zb_oof <- if (use_cf && honest && honest_offset && !(i == 1 && init == "zero")) zb_honest(Y - fz - (if (i == 1) f_prev0 else fhat), Btilde,
+      ## (with init = "zero" the first offset is 0 for all rows, which already excludes the held-out rows)
+      zb_oof <- if (use_cf && heldout_blup && heldout_offset && !(i == 1 && init == "zero")) zb_heldout(Y - fz - (if (i == 1) f_prev0 else fhat), Btilde,
                                                 as.numeric(sigmahat)) + fz else NULL
       ms <- mexgb_mstep(X, Y, status_all, offset = zb, offset_oof = zb_oof, family = "gaussian", params = params,
                         ntree = ntree, cf_fold = cf_arg, f0 = mean(ystar), linear = if (lin_auto && n_lin < screen_iter) "auto" else linear,
                         lin_alpha = lin_alpha, ntree_select = ntree_select, lin_relax = lin_relax,
-                        screen = screen, screen_sets = if (screen == "auto") NULL else screen_sets_cur, cluster_id = id)
+                        screen = screen, screen_sets = if (screen == "auto") NULL else screen_sets_cur)
       forest <- ms$model; nrounds_i <- ms$nrounds
         if (lin_auto && n_lin < screen_iter) { lin_dec <- rbind(lin_dec, ms$cv_loss_both); linear <- isTRUE(ms$linear_chosen); n_lin <- n_lin + 1 }
         if (!is.null(ms$cv_loss_screen)) scr_dec <- rbind(scr_dec, ms$cv_loss_screen)
@@ -505,17 +511,17 @@ MEXGB = function (X, Y, id, Z, iter = 100, ntree = 5000, time, shrinkage = 0.1,
       ## absorb what f has not yet learned). The shrunken D is used for the BLUPs of the next
       ## M-step, so that f is fitted on the part of the signal the random effects do not predict.
       hon <- NA_real_
-      if (use_cf && honest && honest_d && all(is.finite(Btilde))) {
+      if (use_cf && heldout_blup && heldout_dscale && all(is.finite(Btilde))) {
         r_cf <- Y - fhat - fz
         cs <- c(0, 1/16, 1/8, 1/4, 1/2, 1)
         Ec <- vapply(cs, function(cc) if (cc == 0) r_cf^2 else
-          (r_cf - zb_honest(r_cf, cc * Btilde, as.numeric(sigmahat)))^2, numeric(N))
+          (r_cf - zb_heldout(r_cf, cc * Btilde, as.numeric(sigmahat)))^2, numeric(N))
         Lc <- colSums(Ec)
         ## D is shrunk only when the best scale is significantly better than the EM estimate
-        ## (subject-clustered comparison of held-out squared errors, heuristic score > 2)
+        ## (paired comparison of the held-out squared errors, z > 2)
         k_best <- which.min(Lc); dd <- Ec[, length(cs)] - Ec[, k_best]
-        zc <- if (k_best < length(cs)) mexgb_cluster_score(dd, id) else 0
-        if (is.na(zc) || zc <= 2) k_best <- length(cs)
+        zc <- if (k_best < length(cs)) mean(dd) / (stats::sd(dd) / sqrt(N)) else 0
+        if (!is.finite(zc) || zc <= 2) k_best <- length(cs)
         c_best <- cs[k_best]; hon <- Lc[k_best] / N
         d_scale[i] <- c_best
         if (c_best < 1) {
@@ -530,7 +536,7 @@ MEXGB = function (X, Y, id, Z, iter = 100, ntree = 5000, time, shrinkage = 0.1,
           btilde <- centre_b(btilde)
         }
       }
-      honest_loss[i] <- hon
+      heldout_loss[i] <- hon
       Vrai <- c(Vrai, logV(Y, fhat + fz, Z, time, id, Btilde,
                            0, sigmahat))
       if (!is.finite(Vrai[i]) || any(!is.finite(Btilde))) { diverged <- TRUE; break }
@@ -541,7 +547,7 @@ MEXGB = function (X, Y, id, Z, iter = 100, ntree = 5000, time, shrinkage = 0.1,
         converged <- TRUE
         break
       }
-      if (stall >= patience) { stopped_patience <- TRUE; break }
+      if (stall >= stall_iter) { stopped_stall <- TRUE; break }
     }
 
   } else {
@@ -571,7 +577,7 @@ MEXGB = function (X, Y, id, Z, iter = 100, ntree = 5000, time, shrinkage = 0.1,
         ms <- mexgb_mstep(X, Y, status_all, offset = zb, family = "binomial", params = params,
                           ntree = ntree, cf_fold = cf_arg, f0 = f0, linear = linear,
                           lin_alpha = lin_alpha, ntree_select = ntree_select, lin_relax = lin_relax,
-                        screen = screen, screen_sets = if (screen == "auto") NULL else screen_sets_cur, cluster_id = id)
+                        screen = screen, screen_sets = if (screen == "auto") NULL else screen_sets_cur)
         forest <- ms$model; nrounds_i <- ms$nrounds
         if (identical(linear, "auto")) { lin_dec <- ms$cv_loss_both; linear <- isTRUE(ms$linear_chosen) }
         if (!is.null(ms$screen_sets)) {   # screening (re)decided at the first 'screen_iter' M-steps
@@ -596,7 +602,7 @@ MEXGB = function (X, Y, id, Z, iter = 100, ntree = 5000, time, shrinkage = 0.1,
         ms <- mexgb_mstep(X, Y, status_all, offset = zb, family = "cox", params = params,
                           ntree = ntree, cf_fold = cf_arg, f0 = 0, linear = linear,
                           lin_alpha = lin_alpha, ntree_select = ntree_select, lin_relax = lin_relax,
-                        screen = screen, screen_sets = if (screen == "auto") NULL else screen_sets_cur, cluster_id = id)
+                        screen = screen, screen_sets = if (screen == "auto") NULL else screen_sets_cur)
         forest <- ms$model; nrounds_i <- ms$nrounds
         if (identical(linear, "auto")) { lin_dec <- ms$cv_loss_both; linear <- isTRUE(ms$linear_chosen) }
         if (!is.null(ms$screen_sets)) {   # screening (re)decided at the first 'screen_iter' M-steps
@@ -671,7 +677,7 @@ MEXGB = function (X, Y, id, Z, iter = 100, ntree = 5000, time, shrinkage = 0.1,
         la <- laplace_estep(family, Y, status_all, fhat + fz, btilde, Btilde, Z, indiv_list, eps,
                             centre = (family == "cox" && length(int_col) == 1), int_col = int_col)
         laplace_diagnostics[[i]] <- la[c("converged", "code", "message")]
-        if (isTRUE(la$converged)) { btilde <- centre_b(la$b); Btilde <- la$D }
+        if (!is.null(la$D)) { btilde <- centre_b(la$b); Btilde <- la$D }
       }
       ## Comparable criterion across iterations: -2 x Laplace approximation of the marginal
       ## log-likelihood at the cross-fitted fixed effect (the PQL working likelihood changes
@@ -693,14 +699,14 @@ MEXGB = function (X, Y, id, Z, iter = 100, ntree = 5000, time, shrinkage = 0.1,
         converged <- TRUE
         break
       }
-      if (stall >= patience) { stopped_patience <- TRUE; break }
+      if (stall >= stall_iter) { stopped_stall <- TRUE; break }
     }
   }
   if (diverged && !is.finite(best$ll))
     stop("the EM diverged in its first iteration (non-finite likelihood)")
 
   ## Not converged within 'delta': return the state with the best (smallest) -2 log-likelihood
-  if ((!converged || (use_cf && honest && family == "gaussian")) && is.finite(best$ll) && best$iter != i) {
+  if ((!converged || (use_cf && heldout_blup && family == "gaussian")) && is.finite(best$ll) && best$iter != i) {
     forest <- best$forest; btilde <- best$btilde; Btilde <- best$Btilde
     sigmahat <- best$sigmahat; fhat <- best$fhat; fhat_full <- best$fhat_full
     cal_slope <- best$cal_slope; cal_center <- best$cal_center; nrounds_i <- best$nrounds
@@ -713,14 +719,14 @@ MEXGB = function (X, Y, id, Z, iter = 100, ntree = 5000, time, shrinkage = 0.1,
   }
 
   failed_laplace <- which(vapply(laplace_diagnostics, function(x)
-    !is.null(x) && !isTRUE(x$converged), logical(1)))
-  if (length(failed_laplace)) warning("Laplace optimization failed to converge at iteration(s) ",
+    !is.null(x) && is.na(x$code), logical(1)))
+  if (length(failed_laplace)) warning("Laplace update failed at iteration(s) ",
     paste(failed_laplace, collapse = ", "), "; retained the PQL update. See laplace_diagnostics.", call. = FALSE)
   if (verbose) {
     if (converged) print(paste0("stopped after ", i, " iterations."))
     else if (diverged) print(paste0("non-finite likelihood at iteration ", i,
                                     ": stopped, returning iteration ", best$iter, "."))
-    else if (stopped_patience) print(paste0("no improvement of the log-likelihood in ", patience,
+    else if (stopped_stall) print(paste0("no improvement of the log-likelihood in ", stall_iter,
                                             " iterations: stopped after ", i,
                                             " iterations, returning iteration ", best$iter, "."))
     else print(paste0("maximum number of iterations (", iter, ") reached without convergence; returning iteration ",
@@ -729,13 +735,13 @@ MEXGB = function (X, Y, id, Z, iter = 100, ntree = 5000, time, shrinkage = 0.1,
   results <- list(forest = forest, random_effects = btilde,
                   var_random_effects = Btilde, sigma = sigmahat,
                   id_btilde = unique(id), LL = Vrai,
-                  id = id, time = time, OOB = OOB, honest_loss = honest_loss, d_scale = d_scale,
+                  id = id, time = time, OOB = OOB, heldout_loss = heldout_loss, d_scale = d_scale,
                   importance = if (!is.null(forest$beta)) mexgb_importance(forest, X) else
                     if (!is.null(forest$booster)) xgbimportance(forest$booster, colnames(X)) else
                       stats::setNames(rep(0, ncol(X)), colnames(X)),
                   z_names = colnames(Z), laplace_diagnostics = laplace_diagnostics[seq_len(i)],
                   family = family, converged = converged, n_iter = i, diverged = diverged,
-                  best_iter = if (converged && !(use_cf && honest && family == "gaussian")) i else best$iter,
+                  best_iter = if (converged && !(use_cf && heldout_blup && family == "gaussian")) i else best$iter,
                   feature_names = colnames(X), ntree = ntree, f0 = f0, cal_slope = cal_slope, cal_center = cal_center,
                   nrounds = nrounds_i, linear = linear, beta_z = beta_z,
                   lin_decision = lin_dec, screen_decision = scr_dec, screened = if (is.list(screen_sets_cur)) colnames(X)[screen_sets_cur$full] else NULL,
@@ -1033,8 +1039,7 @@ logV <- function(Y,f,Z,time,id,B,gamma,sigma){ # -2 log-likelihood (up to a cons
   for (i in 1:length(unique(id))){
     w <- which(id==unique(id)[i])
     V <- Z[w,,drop=FALSE]%*%B%*%t(Z[w,,drop=FALSE])+diag(as.numeric(sigma),length(w),length(w))
-    Vraisem <- Vraisem + as.numeric(determinant(V, logarithm = TRUE)$modulus) +
-      t(Y[w] - f[w]) %*% solve(V, Y[w] - f[w])
+    Vraisem <- Vraisem + log(det(V))+ t(Y[w]-f[w])%*%solve(V)%*%(Y[w]-f[w])
   }
   return(as.numeric(Vraisem))
 }
@@ -1406,13 +1411,16 @@ expected_auc <- function(s, prob){
 #' \eqn{E[C]=\sum_{s_i>s_j}h_i/(h_i+h_j)/\#\{s_i>s_j\}} with \eqn{h=\exp(\eta)}.
 #' @keywords internal
 expected_cindex <- function(s, eta){
+  h <- exp(eta - max(eta))
   num <- 0; den <- 0
   n <- length(s)
   chunk <- 500
   for (a in seq(1, n, by = chunk)) {
     ia <- a:min(n, a + chunk - 1)
     gt <- outer(s[ia], s, ">")
-    pr <- stats::plogis(outer(eta[ia], eta, "-"))
+    pr <- outer(h[ia], h, function(x, y) x / (x + y))   # MEXGB 0.5.0 arithmetic
+    bad <- !is.finite(pr)                                # 0/0 under extreme predictors only
+    if (any(bad)) pr[bad] <- stats::plogis(outer(eta[ia], eta, "-"))[bad]
     tied <- outer(s[ia], s, "==")
     tied[cbind(seq_along(ia), ia)] <- FALSE
     num <- num + sum(pr[gt]) + 0.25 * sum(tied)
@@ -1539,13 +1547,15 @@ laplace_estep <- function(family, Y, status, f, b, D, Z, indiv_list, eps = 1e-6,
     if (!is.finite(v)) 1e100 else v
   }
   th0 <- tryCatch(fromD(D), error = function(e) NULL)
-  if (is.null(th0)) return(list(converged = FALSE, code = NA_integer_, message = "Invalid starting covariance."))
+  if (is.null(th0)) return(list(D = NULL, converged = FALSE, code = NA_integer_, message = "Invalid starting covariance."))
   op <- tryCatch(stats::optim(th0, obj, method = if (length(th0) == 1) "BFGS" else "Nelder-Mead",
                               control = list(maxit = 300, reltol = 1e-8)), error = function(e) NULL)
-  if (is.null(op) || !is.finite(op$value) || op$convergence != 0L)
-    return(list(converged = FALSE, code = if (is.null(op)) NA_integer_ else op$convergence,
-                message = if (is.null(op)) "Optimizer failed." else op$message %||% "Optimizer did not converge."))
+  if (is.null(op) || !is.finite(op$value))
+    return(list(D = NULL, converged = FALSE, code = NA_integer_,
+                message = if (is.null(op)) "Optimizer failed." else "Non-finite criterion."))
   Dn <- toD(op$par)
   list(D = Dn, b = re_modes(family, Y, status, f, bcur, Dn, Z, indiv_list, eps, centre, int_col),
-       crit = op$value, converged = TRUE, code = op$convergence, message = "Converged.")
+       crit = op$value, converged = op$convergence == 0L, code = op$convergence,
+       message = if (op$convergence == 0L) "Converged." else
+         "Iteration limit reached; optimizer result used.")
 }

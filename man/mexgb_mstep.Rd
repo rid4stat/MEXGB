@@ -19,14 +19,13 @@ mexgb_mstep(
   ntree_select = c("cv", "fixed"),
   min_trees = 0,
   grid_step = 10,
-  patience = 200,
+  stall_rounds = 200,
   ntree_scale = NULL,
   lin_relax = FALSE,
   screen = "none",
   screen_sets = NULL,
   screen_sizes = c(5, 10, 20, 40),
-  offset_oof = NULL,
-  cluster_id = seq_len(nrow(X))
+  offset_oof = NULL
 )
 }
 \value{

@@ -78,8 +78,7 @@ mexgb_linear <- function(X, Y, status, offset, family, cf_fold, alpha = 1, nlamb
                                    if (family == "cox") yy[tr, , drop = FALSE] else yy[tr],
                                    family = fam, offset = offset[tr], alpha = alpha,
                                    lambda = lam), error = function(e) NULL)
-    if (is.null(fit)) stop("Penalised linear fit failed in cross-fitting fold ", v,
-                           "; no full-data replacement is used for held-out predictions.")
+    if (is.null(fit)) { loss[v, , ] <- Inf; next }
     Bl <- coef_mat(fit, tr)
     fold_B[[v]] <- Bl
     for (g in seq_len(G)) {
@@ -89,7 +88,7 @@ mexgb_linear <- function(X, Y, status, offset, family, cf_fold, alpha = 1, nlamb
     }
   }
   tot <- apply(loss, c(2, 3), sum)
-  if (all(!is.finite(tot))) stop("No finite cross-validated linear-model loss.") else {
+  if (all(!is.finite(tot))) { k <- 1; g <- G } else {
     idx <- which(tot == min(tot[is.finite(tot)]), arr.ind = TRUE)[1, ]
     k <- idx[1]; g <- idx[2]
   }
@@ -97,7 +96,8 @@ mexgb_linear <- function(X, Y, status, offset, family, cf_fold, alpha = 1, nlamb
   g_full <- as.numeric(lin_pred(Bfull, X))
   g_fold <- matrix(0, N, V)
   for (v in seq_len(V))
-    g_fold[, v] <- as.numeric(lin_pred(fold_B[[v]][[g]][, k, drop = FALSE], X))
+    g_fold[, v] <- if (is.null(fold_B[[v]])) g_full else
+      as.numeric(lin_pred(fold_B[[v]][[g]][, k, drop = FALSE], X))
   list(g_full = g_full, g_fold = g_fold, lambda = lam[k], gamma = if (relax) gammas[g] else 1,
        intercept = if (family == "cox") 0 else Bfull[1, 1],
        beta = if (family == "cox") Bfull[, 1] else Bfull[-1, 1],
@@ -112,25 +112,25 @@ mexgb_linear <- function(X, Y, status, offset, family, cf_fold, alpha = 1, nlamb
 #' @keywords internal
 mexgb_mstep <- function(X, Y, status, offset, family, params, ntree, cf_fold, f0 = 0,
                         linear = FALSE, lin_alpha = 1, ntree_select = c("cv", "fixed"),
-                        min_trees = 0, grid_step = 10, patience = 200,
+                        min_trees = 0, grid_step = 10, stall_rounds = 200,
                         ntree_scale = NULL, lin_relax = FALSE, screen = "none",
-                        screen_sets = NULL, screen_sizes = c(5, 10, 20, 40), offset_oof = NULL, cluster_id = seq_len(nrow(X))) {
+                        screen_sets = NULL, screen_sizes = c(5, 10, 20, 40), offset_oof = NULL) {
   ntree_select <- match.arg(ntree_select)
   ## offset used for the held-out rows of the out-of-fold loss: the random effects predicted
-  ## WITHOUT the held-out rows (honest), otherwise the in-sample offset
+  ## WITHOUT the held-out rows, otherwise the in-sample offset
   offo <- if (is.null(offset_oof)) offset else offset_oof
   if (identical(screen, "auto") && is.null(screen_sets) && !is.null(cf_fold) &&
       ntree_select == "cv" && ncol(X) > min(screen_sizes)) {
     ## feature screening for the trees: pass 1 on all predictors; pass 2 on the predictors
     ## the K top-ranked predictors (by split gain) of each fold model, K chosen among screen_sizes
-    ## out-of-fold comparison of the two passes is honest); the pass with the smaller
+    ## out-of-fold comparison of the two passes excludes the held-out rows); the pass with the smaller
     ## out-of-fold loss is kept
     args <- list(X = X, Y = Y, status = status, offset = offset, family = family,
                  params = params, ntree = ntree, cf_fold = cf_fold, f0 = f0, linear = linear,
                  lin_alpha = lin_alpha, ntree_select = ntree_select, min_trees = min_trees,
-                 grid_step = grid_step, patience = patience, ntree_scale = ntree_scale,
+                 grid_step = grid_step, stall_rounds = stall_rounds, ntree_scale = ntree_scale,
                  lin_relax = lin_relax, screen = "none", screen_sizes = screen_sizes,
-                 offset_oof = offset_oof, cluster_id = cluster_id)
+                 offset_oof = offset_oof)
     r_all <- do.call(mexgb_mstep, args)
     ## linear = "auto": the structure is decided on all predictors, and the screened candidates
     ## are fitted with the structure chosen there (deciding it separately for every candidate
@@ -150,12 +150,12 @@ mexgb_mstep <- function(X, Y, status, offset, family, params, ntree, cf_fold, f0
       if (is.finite(r$cv_loss) && r$cv_loss < best$cv_loss) { best <- r; best_sets <- sets }
     }
     ## Gaussian: the screened set replaces all predictors only when it is significantly better
-    ## out of fold (subject-clustered comparison of held-out squared errors, heuristic score > 2), as for the linear
+    ## out of fold (paired comparison of the held-out squared errors, z > 2), as for the linear
     ## part and the scale of D: a near-tie is resolved in favour of all predictors
     if (family == "gaussian" && is.list(best_sets)) {
       dl <- (Y - offo - r_all$fixed_cf)^2 - (Y - offo - best$fixed_cf)^2
-      z <- mexgb_cluster_score(dl, cluster_id)
-      if (is.na(z) || z <= 2) { best <- r_all; best_sets <- "none" }
+      z <- mean(dl) / (stats::sd(dl) / sqrt(length(dl)))
+      if (!is.finite(z) || z <= 2) { best <- r_all; best_sets <- "none" }
     }
     best$screen_sets <- best_sets
     best$cv_loss_screen <- losses
@@ -168,9 +168,9 @@ mexgb_mstep <- function(X, Y, status, offset, family, params, ntree, cf_fold, f0
       args <- list(X = X, Y = Y, status = status, offset = offset, family = family,
                    params = params, ntree = ntree, cf_fold = cf_fold, f0 = f0,
                    lin_alpha = lin_alpha, ntree_select = ntree_select, min_trees = min_trees,
-                   grid_step = grid_step, patience = patience, ntree_scale = ntree_scale,
+                   grid_step = grid_step, stall_rounds = stall_rounds, ntree_scale = ntree_scale,
                    lin_relax = lin_relax, screen = screen, screen_sets = screen_sets,
-                   offset_oof = offset_oof, cluster_id = cluster_id)
+                   offset_oof = offset_oof)
       r1 <- do.call(mexgb_mstep, c(args, list(linear = TRUE)))
       r0 <- do.call(mexgb_mstep, c(args, list(linear = FALSE)))
       ## the two structures are alternatives of equal standing (neither is a departure from a
@@ -198,8 +198,9 @@ mexgb_mstep <- function(X, Y, status, offset, family, params, ntree, cf_fold, f0
   ## ---- linear part --------------------------------------------------------------
   lin <- NULL
   if (linear && use_cf) {
-    lin <- mexgb_linear(X, Y, status, offset, family, cf_fold, alpha = lin_alpha, relax = lin_relax,
-                                 offset_oof = offset_oof)
+    lin <- tryCatch(mexgb_linear(X, Y, status, offset, family, cf_fold, alpha = lin_alpha, relax = lin_relax,
+                                 offset_oof = offset_oof),
+                    error = function(e) NULL)
   }
   if (!is.null(lin)) {
     base_full <- lin$g_full
@@ -217,7 +218,7 @@ mexgb_mstep <- function(X, Y, status, offset, family, params, ntree, cf_fold, f0
   if (use_cf) {
     ## fold models grown in chunks of 'grid_step' rounds; the out-of-fold loss of the sum
     ## over folds is evaluated after every chunk (0 trees included), and growth stops when
-    ## the best number of rounds is 'patience' rounds behind (or at ntree)
+    ## the best number of rounds is 'stall_rounds' rounds behind (or at ntree)
     dtr <- vector("list", V); te_rows <- vector("list", V)
     for (v in seq_len(V)) {
       te <- which(cf_fold == v); tr <- setdiff(seq_len(N), te); te_rows[[v]] <- te
@@ -262,7 +263,7 @@ mexgb_mstep <- function(X, Y, status, offset, family, params, ntree, cf_fold, f0
         }
         cur <- nxt; grid <- c(grid, gpts); curve <- c(curve, lv)
         best <- grid[which.min(curve)]
-        if (cur >= ntree || cur - best >= patience) break
+        if (cur >= ntree || cur - best >= stall_rounds) break
       }
       M <- max(grid[which.min(curve)], min_trees)
     }

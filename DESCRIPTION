@@ -2,21 +2,19 @@ Package: MEXGB
 Type: Package
 Title: Mixed-Effect Extreme Gradient Boosting for Longitudinal Data
 Version: 1.0.0
-Authors@R: c(person("Ajibade Kunle", "Saheed", role = "aut"),
-             person("Oyebayo Ridwan", "Olaniran", role = c("aut", "cre"),
-                    email = "olaniran.or@kwasu.edu.ng"),
-             person("Mohd Asrul Affendi", "Abdullah", role = "aut"),
-             person("Saidat Fehintola", "Olaniran", role = "ctb",
-                    comment = "Co-author of MEGB, from which Gaussian update code was adapted"))
-Maintainer: Oyebayo Ridwan Olaniran <olaniran.or@kwasu.edu.ng>
+Authors@R: c(person("Oyebayo Ridwan", "Olaniran", role = c("aut", "cre")),
+             person("Saheed Kunle", "Ajibade", role = "aut",
+                    email = "rid4stat@yahoo.com"),
+             person("Samuel Adewale", "Aderoju", role = "aut"))
+Maintainer: Oyebayo Ridwan Olaniran <rid4stat@yahoo.com>
 Description: Fits mixed-effects extreme gradient boosting models for Gaussian,
     binary and clustered right-censored survival outcomes. Combines subject-specific
     random effects with boosted trees and optional penalised linear terms using
     'xgboost' and 'glmnet'. Provides within-subject cross-fitting, predictor screening,
     approximate variance-component estimation, conditional prediction and simulation
     utilities. Builds on extreme gradient boosting by Chen and Guestrin (2016)
-    <doi:10.1145/2939672.2939785> and mixed-effects tree ensembles by
-    Capitaine et al. (2021) <doi:10.1177/0962280220946080>.
+    <doi:10.1145/2939672.2939785> and mixed-effects gradient boosting by
+    Olaniran et al. (2025) <doi:10.1038/s41598-025-16526-z>.
 License: GPL-2
 Encoding: UTF-8
 Depends: R (>= 4.1.0)
@@ -25,12 +23,4 @@ Suggests: testthat (>= 3.0.0), knitr, rmarkdown
 VignetteBuilder: knitr
 Config/testthat/edition: 3
 NeedsCompilation: no
-Config/roxygen2/version: 8.1.0
-Packaged: 2026-11-12 16:27:27 UTC; agent
-Author: Ajibade Kunle Saheed [aut],
-  Oyebayo Ridwan Olaniran [aut, cre],
-  Mohd Asrul Affendi Abdullah [aut],
-  Saidat Fehintola Olaniran [ctb] (Co-author of MEGB, from which Gaussian
-    update code was adapted)
-URL: https://github.com/rid4stat/MEXGB
-BugReports: https://github.com/rid4stat/MEXGB/issues
+RoxygenNote: 7.3.1

@@ -48,15 +48,3 @@ mexgb_sim_inputs <- function(linear, rel_p, time_points, rho_W, rho_Z,
   mexgb_number(pilot_seed, "pilot_seed", 0, .Machine$integer.max, integer = TRUE)
 }
 
-## Subject-clustered standard error of the row-weighted mean loss difference.
-## Used only as a conservative model-selection heuristic, not a hypothesis test.
-mexgb_cluster_score <- function(d, id) {
-  if (length(d) != length(id) || any(!is.finite(d))) return(NA_real_)
-  groups <- unique(id); G <- length(groups)
-  if (G < 2L) return(NA_real_)
-  mu <- mean(d)
-  sums <- vapply(groups, function(g) sum(d[id == g] - mu), numeric(1))
-  se <- sqrt(G / (G - 1) * sum(sums^2)) / length(d)
-  if (se == 0) return(if (mu > 0) Inf else 0)
-  mu / se
-}

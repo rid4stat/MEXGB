@@ -1,0 +1,15 @@
+MEXGB is distributed under GPL-2, as specified in DESCRIPTION.
+
+Gaussian EM/BLUP code, particularly sig(), bay() and logV(), is adapted from
+MEGB 0.2, Gradient Boosting for Longitudinal Data (GPL-2), authored by
+Oyebayo Ridwan Olaniran and Saidat Fehintola Olaniran.
+Source: https://CRAN.R-project.org/package=MEGB
+DOI: 10.32614/CRAN.package.MEGB
+
+The release review compared these functions with MEGB 0.2. MEXGB changes include
+extreme gradient boosting, cross-fitting, extended outcome families and revised
+validation, numerical handling and documentation. Saidat Fehintola Olaniran is
+credited as a contributor of the adapted code; this does not imply endorsement
+or responsibility for the new implementation. Methodological references appear
+in the manual and CITATION. Maintainers remain responsible for verifying any
+additional source provenance and obtaining agreement from credited authors.

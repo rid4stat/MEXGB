@@ -1,0 +1,68 @@
+---
+title: "Using MEXGB"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Using MEXGB}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+```
+
+MEXGB combines flexible fixed effects with subject-specific random effects.
+The Gaussian model assumes independent residuals conditional on these effects.
+
+```{r gaussian}
+library(MEXGB)
+set.seed(10)
+d <- simLong(8, 6, time_points = 4, rho_W = 0)
+X <- as.matrix(d[paste0("Var", 1:6)])
+Z <- as.matrix(d[c("RandomIntercept", "RandomSlope")])
+fit <- MEXGB(X, d$Y, d$id, Z, time = d$time,
+             ntree = 10, iter = 2, inner = 2, crossfit = 2,
+             linear = FALSE, screen = "none", verbose = FALSE)
+fit
+head(predict(fit, X, Z, d$id, d$time))
+```
+
+The small iteration budget illustrates the interface, not convergence or model
+accuracy. For a substantive analysis increase the budget and inspect diagnostics.
+
+For unseen subjects, random effects are zero but population coefficients of `Z`
+are retained:
+
+```{r new-subject}
+head(predict(fit, X, Z, d$id + 100, d$time))
+summary(fit)
+```
+
+Use `family = "binomial"` with a numeric 0/1 outcome or `family = "cox"` with a
+two-column matrix of positive observed times and 0/1 status (1 means event).
+Right-censored `survival::Surv` inputs are also supported. Start-stop and interval
+censoring are not. Cox rows represent clustered event times rather than repeated
+time-varying records for one terminal event. `type = "survival"` returns a matrix
+of conditional survival probabilities for requested `times`.
+
+For nonlinear links, zero-random-effect predictions are not marginal predictions
+integrated over the random-effects distribution. The Cox update uses a Poisson
+working approximation. Failed Laplace optimizations warn, retain the PQL update,
+and appear in `laplace_diagnostics`.
+
+## Evaluation
+
+Within-subject folds tune predictions for additional observations of represented
+subjects. They are not subject-held-out validation or temporal validation.
+Adaptive choices share these folds; evaluate final performance on an independent
+test set or with nested validation tailored to the task. Never report the training
+predictions above as external validation performance.
+
+## Simulation
+
+`simLong()` generates Gaussian, binary or clustered event-time data. Binary and
+survival discrimination targets are solved on a finite pilot; achieved pilot
+values do not guarantee exact population or realised-sample discrimination.
+Survival censoring rates are calibrated on the realised sample. Gaussian
+simulations with nonzero `rho_W` include residual serial correlation beyond that
+modelled by MEXGB and can be used to study misspecification.

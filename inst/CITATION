@@ -1,0 +1,9 @@
+bibentry(
+  bibtype = "Manual",
+  title = "MEXGB: Mixed-Effect Extreme Gradient Boosting for Longitudinal Data",
+  author = c(person("Ajibade Kunle", "Saheed"),
+             person("Oyebayo Ridwan", "Olaniran"),
+             person("Mohd Asrul Affendi", "Abdullah")),
+  year = "2026",
+  note = "R package version 1.0.0"
+)

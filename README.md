@@ -41,7 +41,7 @@ random-effect covariance. Three outcome families are supported:
 | `family`     | Model                                                                                                                |
 |--------------|----------------------------------------------------------------------------------------------------------------------|
 | `"gaussian"` | $y_{ij}=\eta_{ij}+\epsilon_{ij}$, $\epsilon_{ij}\sim N(0,\sigma^2)$ independent given $b_i$                          |
-| `"binomial"` | $\text{logit} \\Bigl[P(y_{ij}\\Bigr]=1\mid b_i)=\eta_{ij}$                                                                 |
+| `"binomial"` | $\text{logit} \\bigl[P(y_{ij}=1\mid b_i)\\bigr]=\eta_{ij}$                                                                 |
 | `"cox"`      | $\lambda_{ij}(t\mid b_i)=\lambda_0(t)\exp(\eta_{ij})$ (log-normal frailty Cox model; clustered right-censored times) |
 
 The fixed effect is

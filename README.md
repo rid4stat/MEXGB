@@ -93,7 +93,7 @@ $$
 \hat\sigma^2=\frac{1}{N}\sum_i \\Bigl\\{\hat\epsilon_i^\top\hat\epsilon_i+\sigma^2\\Bigl(n_i-\sigma^2\text{tr}V_i^{-1}\\Bigr)\\Bigr\\},
 $$
 
-$$\hat D=\frac1n\sum_i \\Bigl\{\hat b_i\hat b_i^\top+D-DZ_i^\top V_i^{-1}Z_iD\\Bigr\},\qquad
+$$\hat D=\frac1n\sum_i \\Bigl\\{\hat b_i\hat b_i^\top+D-DZ_i^\top V_i^{-1}Z_iD\\Bigr\\},\qquad
 \hat\epsilon_i=r_i-Z_i\hat b_i,$$
 
 iterated to convergence (`inner`, `inner_tol`) for the current $\hat f$

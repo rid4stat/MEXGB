@@ -535,12 +535,18 @@ head(predict(fit, X[1:3, ], Z[1:3, ], id = rep(999, 3), time = data$time[1:3]))
 
 If you use MEXGB, please cite the package and the methodological paper:
 
-- Saheed, A. K., Olaniran, O. R., & Abdullah, M. A. A. (2026). *MEXGB:
+- Olaniran, O. R.,Saheed, A. K. & Aderoju, S. A. (2026). *MEXGB:
   Mixed-Effect Extreme Gradient Boosting for Longitudinal Data*. R
   package version 1.0.0.
-- Saheed, A. K., Olaniran, O. R., & Abdullah, M. A. A. (2026).
-  Mixed-effect extreme gradient boosting for high-dimensional
-  longitudinal data. *Submitted to Statistics and Computing*.
+- Olaniran, O. R., Saheed, A. K., Aderoju S. A., Bolakale, A. & Alharbi, N. M. (2026).
+  Mixed-effects extreme gradient boosting for high-dimensional longitudinal data with continuous outcomes. 
+  *Submission in progress to Statistics and Computing*.
+- Saheed, A. K., Olaniran, O. R., Aderoju S. A., Bolakale, A. & Alharbi, N. M. (2026).
+  Mixed-effects extreme gradient boosting for high-dimensional longitudinal data with binary outcomes. 
+  *Submission in progress to Statistical Papers*.
+- Saheed, A. K., Olaniran, O. R., Aderoju S. A., Idowu, A. & Alharbi, N. M. (2026).
+  Mixed-effects extreme gradient boosting for high-dimensional longitudinal data with survival outcomes. 
+  *Submission in progress to Scientific Reports*.
 
 MEXGB builds on MEGB:
 

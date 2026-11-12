@@ -41,7 +41,7 @@ random-effect covariance. Three outcome families are supported:
 | `family`     | Model                                                                                                                |
 |--------------|----------------------------------------------------------------------------------------------------------------------|
 | `"gaussian"` | $y_{ij}=\eta_{ij}+\epsilon_{ij}$, $\epsilon_{ij}\sim N(0,\sigma^2)$ independent given $b_i$                          |
-| `"binomial"` | $\operatorname{logit} P(y_{ij}=1\mid b_i)=\eta_{ij}$                                                                 |
+| `"binomial"` | $\text{logit} P(y_{ij}=1\mid b_i)=\eta_{ij}$                                                                 |
 | `"cox"`      | $\lambda_{ij}(t\mid b_i)=\lambda_0(t)\exp(\eta_{ij})$ (log-normal frailty Cox model; clustered right-censored times) |
 
 The fixed effect is
@@ -70,7 +70,7 @@ $$T_m=\arg\min_T\sum_{ij}\Big[g_{ij}T(x_{ij})+\tfrac12 h_{ij}T(x_{ij})^2\Big]+\g
 so that a leaf with index set $I_\ell$ has weight
 $w_\ell=-\sum_{I_\ell}g/(\sum_{I_\ell}h+\lambda)$ when $\alpha=0$. For
 the Gaussian family $g=\eta-y$ and $h=1$; for the binary family
-$g=\mu-y$ and $h=\mu(1-\mu)$ with $\mu=\operatorname{expit}(\eta)$; for
+$g=\mu-y$ and $h=\mu(1-\mu)$ with $\mu=\text{expit}(\eta)$; for
 the Cox family $g$ and $h$ are those of the Breslow partial likelihood.
 
 **Cross-fitting.** The observations of every individual are spread over
@@ -89,7 +89,7 @@ $r_i=y_i-\hat f_i-Z_i\hat\beta_z$ and
 $V_i=Z_iDZ_i^\top+\sigma^2I_{n_i}$,
 
 $$\hat b_i=DZ_i^\top V_i^{-1}r_i,\qquad
-\hat\sigma^2=\frac1N\sum_i\Big\{\hat\epsilon_i^\top\hat\epsilon_i+\sigma^2\big(n_i-\sigma^2\operatorname{tr}V_i^{-1}\big)\Big\},$$
+\hat\sigma^2=\frac1N\sum_i\Big\{\hat\epsilon_i^\top\hat\epsilon_i+\sigma^2\big(n_i-\sigma^2\text{tr}V_i^{-1}\big)\Big\},$$
 
 $$\hat D=\frac1n\sum_i\Big\{\hat b_i\hat b_i^\top+D-DZ_i^\top V_i^{-1}Z_iD\Big\},\qquad
 \hat\epsilon_i=r_i-Z_i\hat b_i,$$
@@ -110,13 +110,13 @@ $z$ statistic above 2).
 
 **E-step, binary outcomes (PQL with a Laplace correction).** The model
 is linearised at the current fit: with
-$\mu_{ij}=\operatorname{expit}(\eta_{ij})$ and
+$\mu_{ij}=\text{expit}(\eta_{ij})$ and
 $w_{ij}=\mu_{ij}(1-\mu_{ij})$, the working response and covariance are
 
 $$\tilde y_{ij}=\eta_{ij}+\frac{y_{ij}-\mu_{ij}}{w_{ij}},\qquad V_i=Z_iDZ_i^\top+W_i^{-1},$$
 
 and the Gaussian updates are applied to $\tilde y$ with $\sigma^2I$
-replaced by $W_i^{-1}=\operatorname{diag}(1/w_{ij})$. Because the PQL
+replaced by $W_i^{-1}=\text{diag}(1/w_{ij})$. Because the PQL
 estimate of $D$ is biased downwards, `estep = "laplace"` then
 re-estimates $D$ by maximising the Laplace approximation
 
@@ -144,7 +144,7 @@ with cross-fitting, the smallest held-out squared error) is returned.
 **Prediction.** For an individual seen in training,
 $\hat\eta=\hat f(x)+z^\top(\hat\beta_z+\hat b_i)$; for a new individual
 $\hat b_i=0$. `predict()` returns $\hat\eta$ (Gaussian),
-$\operatorname{expit}(\hat\eta)$ (binary), the relative hazard
+$\text{expit}(\hat\eta)$ (binary), the relative hazard
 $e^{\hat\eta}$ (Cox), or the conditional survival
 $\hat S(t\mid x,z)=\exp\{-\hat\Lambda_0(t)e^{\hat\eta}\}$
 (`type = "survival"`).

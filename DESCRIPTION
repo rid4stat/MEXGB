@@ -32,3 +32,5 @@ Author: Ajibade Kunle Saheed [aut],
   Mohd Asrul Affendi Abdullah [aut],
   Saidat Fehintola Olaniran [ctb] (Co-author of MEGB, from which Gaussian
     update code was adapted)
+URL: https://github.com/rid4stat/MEXGB
+BugReports: https://github.com/rid4stat/MEXGB/issues
